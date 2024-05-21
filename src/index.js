@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const crypto = require('crypto');
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -20,9 +21,34 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Success to connect DB'))
     .catch(err => console.log(err))
 
+const randomId = () => crypto.randomBytes(8).toString('hex');
+
+app.post('/session', (req, res) => {
+    let date = {
+        username: req.body.username,
+        userID: randomId()
+    }
+    res.send(data);
+});
+
+io.use((socket, next) => {
+    const username = socket.handshake.auth.username;
+    const userID = socket.handshake.auth.userID;
+    if(!username) {
+        return next(new Error('Invalid username'));
+    }
+    socket.username = username;
+    socket.id = userID;
+    next();
+})
+
+
 let users = [];
 io.on('connection', async socket => {
-    let userData = {};
+    let userData = {
+        username: socket.username,
+        userID: socket.userID
+    };
     users.push(userData);
     io.emit('users-data', { users });
 
