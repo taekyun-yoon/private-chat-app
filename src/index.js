@@ -24,7 +24,8 @@ mongoose.connect(process.env.MONGO_URI)
 const randomId = () => crypto.randomBytes(8).toString('hex');
 
 app.post('/session', (req, res) => {
-    let date = {
+    console.log('session connect', req.body.username);
+    let data = {
         username: req.body.username,
         userID: randomId()
     }
@@ -52,9 +53,25 @@ io.on('connection', async socket => {
     users.push(userData);
     io.emit('users-data', { users });
 
-    socket.on('message-to-server', );
-    socket.on('fetch-messages', );
-    socket.on('disconnect', );  
+
+    socket.on('message-to-server', (message) => {
+        // message 이벤트 핸들링 코드 추가
+        console.log(`Message from ${socket.username}: ${message}`);
+        io.emit('message-from-server', { username: socket.username, message });
+    });
+
+    socket.on('fetch-messages', () => {
+        // 메시지 가져오기 이벤트 핸들링 코드 추가
+        console.log('Fetch messages requested');
+        // 여기에 메시지 로직 추가
+    });
+
+    socket.on('disconnect', () => {
+        // disconnect 이벤트 핸들링 코드 추가
+        console.log(`User ${socket.username} disconnected`);
+        users = users.filter(user => user.userID !== socket.userID);
+        io.emit('users-data', { users });
+    });
 })
 
 const port = 3000

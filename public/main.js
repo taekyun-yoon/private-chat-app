@@ -1,4 +1,5 @@
 const socket = io('http://localhost:3000/', {
+    //socket.connect 한 후에 소켓 연결 가능
     autoConnect: false
 });
 
@@ -29,8 +30,12 @@ const createSession = async (username) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username })
     };
+    console.log('options', options);
     await fetch('/session', options)
-        .then(res => res.json())
+        .then(res => {
+            res.json();
+            console.log('res', res);
+        })
         .then(data => {
             socketConnect(data.username, data.userID);
 
@@ -77,3 +82,14 @@ socket.on('users-data', ({ users }) => {
         userTagline.classList.add('text-danger');
     }
 })
+
+const sessionUsername = localStorage.getItem('session-username');
+const sessionUserID = localStorage.getItem('session-userID');
+
+if (sessionUsername && sessionUserID ){
+    socketConnect(sessionUsername, sessionUserID);
+
+    loginContainer.classList.add('d-none');
+    chatBody.classList.remove('d-none');
+    userTitle.innerHTML = sessionUsername;
+}
