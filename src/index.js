@@ -2,6 +2,8 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const crypto = require('crypto');
+const messageModel = require('../src/models/messages.model');
+const { saveMessages, fetchMessages } = require('./utils/messages');
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -29,6 +31,7 @@ app.post('/session', (req, res) => {
         username: req.body.username,
         userID: randomId()
     }
+    console.log('data: ', data);
     res.send(data);
 });
 
@@ -40,38 +43,45 @@ io.use((socket, next) => {
     }
     socket.username = username;
     socket.id = userID;
+    console.log(socket.username);
+    console.log(socket.id);
     next();
 })
 
 
 let users = [];
 io.on('connection', async socket => {
+    console.log('connection');
+
     let userData = {
         username: socket.username,
-        userID: socket.userID
+        userID: socket.id
     };
+    console.log(userData);
+
     users.push(userData);
     io.emit('users-data', { users });
 
 
-    socket.on('message-to-server', (message) => {
-        // message 이벤트 핸들링 코드 추가
-        console.log(`Message from ${socket.username}: ${message}`);
-        io.emit('message-from-server', { username: socket.username, message });
+    socket.on('message-to-server', (payload) => {
+        io.to(payload.to).emit('message-to-client', payload);
+        saveMessages(payload);
     });
 
-    socket.on('fetch-messages', () => {
-        // 메시지 가져오기 이벤트 핸들링 코드 추가
-        console.log('Fetch messages requested');
-        // 여기에 메시지 로직 추가
-    });
+
+
+    // 데이터베이스에서 메시지 가져오기
+    socket.on('fetch-messages', ({ receiver }) => {
+        fetchMessages(io, socket.id, receiver);
+    })
 
     socket.on('disconnect', () => {
-        // disconnect 이벤트 핸들링 코드 추가
-        console.log(`User ${socket.username} disconnected`);
-        users = users.filter(user => user.userID !== socket.userID);
-        io.emit('users-data', { users });
-    });
+        users = users.filter(user => user.userID !== socket.id);
+        // 사이드바 리스트에서 없애기
+        io.emit('users-data', { users })
+        // 대화 중이라면 대화창 없애기
+        io.emit('user-away', socket.id);
+    })
 })
 
 const port = 3000
