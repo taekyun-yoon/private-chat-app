@@ -31,22 +31,26 @@ const createSession = async (username) => {
         body: JSON.stringify({ username })
     };
     console.log('options', options);
-    await fetch('/session', options)
-        .then(res => {
-            res.json();
-            console.log('res', res);
-        })
-        .then(data => {
-            socketConnect(data.username, data.userID);
+    try{
+        const response = await fetch('/session', options);
+        const data = response.json();
 
+        console.log('data: ', data);
+        if(data.username != undefined){
+            socketConnect(data.username, data.userID);
+    
             localStorage.setItem('session-username', data.username);
             localStorage.setItem('session-userID', data.userID);
-
+    
             loginContainer.classList.add('d-none');
             chatBody.classList.remove('d-none');
             userTitle.innerHTML = data.username;
-        })
-        .catch(err =>  console.log(err))
+        }else{
+            console.log('username is undefined');
+        }
+    }catch(err) {
+        console.log(err);
+    }
 }
 
 const socketConnect = async (username, userID) => {
@@ -93,3 +97,22 @@ if (sessionUsername && sessionUserID ){
     chatBody.classList.remove('d-none');
     userTitle.innerHTML = sessionUsername;
 }
+
+const setActiveUser = (element, username, userID) => {
+    title.innerHTML = username;
+    title.setAttribute('userID', userID);
+
+    const list = document.getElementsByClassName('socket-users');
+    for(let i = 0; i < list.length; i++) {
+        list[i].classList.remove('table-active');
+    }
+    element.classList.add('table-active');
+
+    msgDiv.classList.remove('d-none');
+    messages.classList.remove('d-none');
+    messages.innerHTML = '';
+    socket.emit('fetch-messages', { receiver: userID});
+    const notify = document.getElementById(userID);
+    notify.classList.add('d-none');
+}
+
